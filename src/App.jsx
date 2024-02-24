@@ -1,4 +1,3 @@
-import { useState } from "react";
 import "./App.css";
 
 var todoList = [
@@ -17,8 +16,6 @@ var todoList = [
 ];
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
     <>
       <h1>Todo List</h1>
