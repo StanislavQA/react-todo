@@ -4,7 +4,7 @@ const AddTodoForm = ({ onAddTodo }) => {
   const handleAddTodo = (event) => {
     event.preventDefault();
     const todoTitle = event.target.elements.title.value;
-    console.log(todoTitle);
+    onAddTodo(todoTitle);
     event.target.reset();
   };
   return (
