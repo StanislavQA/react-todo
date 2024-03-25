@@ -1,9 +1,9 @@
 import React from "react";
 
-const ToDoListItem = (props) => {
+const ToDoListItem = ({ todo }) => {
   return (
     <div>
-      <li>{props.todo.title}</li>
+      <li>{todo.title}</li>
     </div>
   );
 };
