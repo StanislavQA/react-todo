@@ -2,7 +2,6 @@ import React from "react";
 import "./App.css";
 import TodoList from "./TodoList";
 import AddTodoForm from "./AddTodoForm";
-import { useEffect, useState } from "react";
 
 // Custom hook to manage semi-persistent state
 function useSemiPersistentState() {
@@ -28,13 +27,20 @@ function App() {
     setTodoList([...todoList, newTodo]);
   };
 
+  // Function to remove a todo item from the todoList state
+  const removeTodo = (id) => {
+    // Filter out the todo item with the given id
+    const updatedTodoList = todoList.filter((todo) => todo.id !== id);
+    setTodoList(updatedTodoList);
+  };
+
   // useEffect hook with todoList as a dependency
 
   return (
     <React.Fragment>
       <h1>Todo List</h1>
       <AddTodoForm onAddTodo={addTodo} />
-      <TodoList todoList={todoList} /> {/* Pass todoList state as a prop */}
+      <TodoList todoList={todoList} onRemoveTodo={removeTodo} />
     </React.Fragment>
   );
 }
