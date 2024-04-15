@@ -19,7 +19,6 @@ const AddTodoForm = ({ onAddTodo }) => {
     <form onSubmit={handleAddTodo}>
       <InputWithLabel
         id="todoTitle"
-        label="Title"
         type="text"
         name="title"
         value={todoTitle}

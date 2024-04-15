@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from "react";
 
-const InputWithLabel = (props) => {
+const InputWithLabel = ({ id, type, name, value, onChange, children }) => {
   // Create an imperative ref using the useRef hook
   const inputRef = useRef();
   useEffect(() => {
@@ -8,13 +8,13 @@ const InputWithLabel = (props) => {
   });
   return (
     <React.Fragment>
-      <label htmlFor={props.id}>{props.label}</label>
+      <label htmlFor={id}>{children}</label>
       <input
-        id={props.id}
-        type={props.type}
-        name={props.name}
-        value={props.value}
-        onChange={props.onChange}
+        id={id}
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
         ref={inputRef}
       />
     </React.Fragment>
