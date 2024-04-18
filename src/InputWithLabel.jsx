@@ -4,8 +4,10 @@ const InputWithLabel = ({ id, type, name, value, onChange, children }) => {
   // Create an imperative ref using the useRef hook
   const inputRef = useRef();
   useEffect(() => {
-    inputRef.current.focus();
-  });
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
   return (
     <React.Fragment>
       <label htmlFor={id}>{children}</label>
