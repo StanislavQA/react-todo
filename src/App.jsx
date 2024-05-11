@@ -10,26 +10,91 @@ function App() {
 
   React.useEffect(() => {
     // Side-effect with an empty dependency list
-    const fetchData = () => {
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const storedData = localStorage.getItem("todoList");
-          const parsedData = storedData ? JSON.parse(storedData) : []; //Added by myself, not sure if it should look like this
-          resolve({ data: { todoList: parsedData } }); // Pass todoList as initial/default list state
-        }, 2000);
-      });
+    const fetchData = async () => {
+      try {
+        // Create URL using enviroment variables
+        const url = `https://api.airtable.com/v0/${
+          import.meta.env.VITE_AIRTABLE_BASE_ID
+        }/${import.meta.env.VITE_TABLE_NAME}`;
+
+        // Declare an empty object variable named options
+        const options = {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_AIRTABLE_API_TOKEN}`,
+          },
+        };
+
+        const response = await fetch(url, options);
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Map data.records into array of todo objects
+        const todos = data.records.map((record) => ({
+          id: record.id,
+          title: record.fields.title,
+        }));
+
+        return todos;
+      } catch (error) {
+        // Handle error e.g., show an error message to the user
+
+        throw error;
+      }
     };
 
-    fetchData().then((result) => {
-      setTodoList(result.data.todoList); // Update todoList with the todoList from the result object
-      setIsLoading(false); // Set isLoading to false after data fetch
-    });
+    fetchData()
+      .then((todos) => {
+        setTodoList(todos); // Set todoList using todos
+        setIsLoading(false); // Setting isLoading to false after the fetch completes
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error.message); // Logging the error message
+        setIsLoading(false); // Also setting isLoading to false in case of an error
+      });
   }, []);
 
-  // Function to add a new todo to the todoList state
-  const addTodo = (newTodo) => {
-    // Update the todoList state and localStorage
-    setTodoList([...todoList, newTodo]);
+  // Update the todoList state and send POST request to API
+  const addTodoToApi = async (title) => {
+    try {
+      const url = `https://api.airtable.com/v0/${
+        import.meta.env.VITE_AIRTABLE_BASE_ID
+      }/${import.meta.env.VITE_TABLE_NAME}`;
+
+      const options = {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_AIRTABLE_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fields: { title } }),
+      };
+
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Error adding todo:", error.message);
+      throw error;
+    }
+  };
+
+  const addTodo = (newTodoTitle) => {
+    // Add todo to API and update todoList state with the response
+    addTodoToApi(newTodoTitle)
+      .then((resp) => {
+        setTodoList([...todoList, { id: resp.id, title: resp.fields.title }]);
+      })
+      .catch((error) => {
+        // Handle error e.g., show an error message to the user
+        console.error("Error adding todo:", error.message);
+      });
   };
 
   // Function to remove a todo item from the todoList state
