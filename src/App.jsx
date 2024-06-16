@@ -15,7 +15,9 @@ function App() {
       // Create URL using enviroment variables
       const url = `https://api.airtable.com/v0/${
         import.meta.env.VITE_AIRTABLE_BASE_ID
-      }/${import.meta.env.VITE_TABLE_NAME}`;
+      }/${
+        import.meta.env.VITE_TABLE_NAME
+      }?sort[0][field]=title&sort[0][direction]=asc`;
 
       // Declare an empty object variable named options
       const options = {
@@ -33,8 +35,22 @@ function App() {
 
       const data = await response.json();
 
+      // Sort records based on the Title field
+      const sortedRecords = data.records.sort((objectA, objectB) => {
+        const titleA = objectA.fields.title.toUpperCase(); // Convert to uppercase for case-insensitive comparison
+        const titleB = objectB.fields.title.toUpperCase();
+
+        if (titleA < titleB) {
+          return 1; // Title A is less than Title B
+        }
+        if (titleA > titleB) {
+          return -1; // Title A is greater than Title B
+        }
+        return 0; // Title A and Title B are the same
+      });
+
       // Map data.records into array of todo objects
-      const todos = data.records.map((record) => ({
+      const todos = sortedRecords.map((record) => ({
         id: record.id,
         title: record.fields.title,
       }));
@@ -42,6 +58,7 @@ function App() {
       setTodoList(todos);
       setIsLoading(false);
     } catch (error) {
+      console.error("Fetch data error:", error.message);
       setError(error.message);
       setIsLoading(false);
     }
@@ -96,10 +113,32 @@ function App() {
   };
 
   // Function to remove a todo item from the todoList state
-  const removeTodo = (id) => {
+  const removeTodo = async (id) => {
     // Filter out the todo item with the given id
     const updatedTodoList = todoList.filter((todo) => todo.id !== id);
     setTodoList(updatedTodoList);
+
+    // Send DELETE request to Airtable
+    try {
+      const url = `https://api.airtable.com/v0/${
+        import.meta.env.VITE_AIRTABLE_BASE_ID
+      }/${import.meta.env.VITE_TABLE_NAME}/${id}`;
+      const options = {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_AIRTABLE_API_TOKEN}`,
+        },
+      };
+
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`Failed to delete todo with id ${id}`);
+      }
+    } catch (error) {
+      console.error(error.message);
+      // Revert optimistic update if delete fails
+      setTodoList((prevTodoList) => [...prevTodoList, ...updatedTodoList]);
+    }
   };
 
   React.useEffect(() => {
