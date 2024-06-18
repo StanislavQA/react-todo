@@ -9,15 +9,15 @@ function App() {
   const [todoList, setTodoList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortOrder, setSortOrder] = useState("asc"); // State for sort order
 
+  // Fetch data from Airtable API
   const fetchData = async () => {
     try {
       // Create URL using enviroment variables
       const url = `https://api.airtable.com/v0/${
         import.meta.env.VITE_AIRTABLE_BASE_ID
-      }/${
-        import.meta.env.VITE_TABLE_NAME
-      }?sort[0][field]=title&sort[0][direction]=asc`;
+      }/${import.meta.env.VITE_TABLE_NAME}`;
 
       // Declare an empty object variable named options
       const options = {
@@ -35,27 +35,16 @@ function App() {
 
       const data = await response.json();
 
-      // Sort records based on the Title field
-      const sortedRecords = data.records.sort((objectA, objectB) => {
-        const titleA = objectA.fields.title.toUpperCase(); // Convert to uppercase for case-insensitive comparison
-        const titleB = objectB.fields.title.toUpperCase();
-
-        if (titleA < titleB) {
-          return 1; // Title A is less than Title B
-        }
-        if (titleA > titleB) {
-          return -1; // Title A is greater than Title B
-        }
-        return 0; // Title A and Title B are the same
-      });
-
       // Map data.records into array of todo objects
-      const todos = sortedRecords.map((record) => ({
+      const todos = data.records.map((record) => ({
         id: record.id,
         title: record.fields.title,
+        createdTime: record.createdTime, // Assuming createdTime is available
       }));
 
-      setTodoList(todos);
+      // Sort todos based on the current sortOrder
+      const sortedTodos = sortTodos(todos, sortOrder);
+      setTodoList(sortedTodos);
       setIsLoading(false);
     } catch (error) {
       console.error("Fetch data error:", error.message);
@@ -66,14 +55,37 @@ function App() {
 
   useEffect(() => {
     fetchData();
+  }, [sortOrder]); // Re-fetch data when sortOrder changes
+
+  // Load data from localStorage or fetch from server
+  useEffect(() => {
+    const localTodos = localStorage.getItem("todoList");
+    if (localTodos) {
+      const parsedTodos = JSON.parse(localTodos);
+      const sortedTodos = sortTodos(parsedTodos, sortOrder);
+      setTodoList(sortedTodos);
+      setIsLoading(false);
+    } else {
+      fetchData();
+    }
   }, []);
 
-  // Update the todoList state and send POST request to API
+  // Save todoList to localStorage whenever it changes
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem("todoList", JSON.stringify(todoList));
+    }
+  }, [todoList, isLoading]);
+
+  // Toggle the sort order between ascending and descending
+  const toggleSortOrder = () => {
+    setSortOrder((prevOrder) => (prevOrder === "asc" ? "desc" : "asc"));
+  };
+
+  // Add a new todo and sort the updated list
   const addTodo = async (todo) => {
     const airtableData = {
-      fields: {
-        title: todo.title,
-      },
+      fields: { title: todo.title },
     };
 
     const url = `https://api.airtable.com/v0/${
@@ -93,28 +105,27 @@ function App() {
       const response = await fetch(url, options);
 
       if (!response.ok) {
-        const message = `Error has ocurred:${response.status}`;
-        throw new Error(message);
+        throw new Error(`Error has ocurred:${response.status}`);
       }
 
       const dataResponse = await response.json();
       const newTodo = {
         id: dataResponse.id,
         title: dataResponse.fields.title,
+        createdTime: dataResponse.createdTime, // Assuming createdTime is returned
       };
 
-      setTodoList((prevTodolist) => [...prevTodolist, newTodo]);
-
-      return dataResponse;
+      // Update and sort the todoList with the new todo
+      const updatedTodoList = sortTodos([...todoList, newTodo], sortOrder);
+      setTodoList(updatedTodoList);
     } catch (error) {
       console.log(error.message);
-      return null;
     }
   };
 
-  // Function to remove a todo item from the todoList state
+  // Remove a todo by id and update the state
   const removeTodo = async (id) => {
-    // Filter out the todo item with the given id
+    // Optimistically update the todoList state
     const updatedTodoList = todoList.filter((todo) => todo.id !== id);
     setTodoList(updatedTodoList);
 
@@ -141,34 +152,41 @@ function App() {
     }
   };
 
-  React.useEffect(() => {
-    //Side-effect to save todoList to localStorage
-    if (!isLoading) {
-      localStorage.setItem("todoList", JSON.stringify(todoList));
-    }
-  }, [todoList, isLoading]);
-
-  // useEffect hook with todoList as a dependency
+  // Helper function to sort todos based on the given order
+  const sortTodos = (todos, order) => {
+    return todos.sort((a, b) => {
+      const titleA = a.title.toUpperCase();
+      const titleB = b.title.toUpperCase();
+      if (order === "asc") {
+        return titleA.localeCompare(titleB);
+      } else {
+        return titleB.localeCompare(titleA);
+      }
+    });
+  };
 
   return (
     <BrowserRouter>
       <React.Fragment>
         <h1>Todo List</h1>
+        <button onClick={toggleSortOrder}>
+          Sort {sortOrder === "asc" ? "Descending" : "Ascending"}
+        </button>
         <AddTodoForm onAddTodo={addTodo} />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              isLoading ? (
-                <p>Loading...</p>
-              ) : (
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        {isLoading ? (
+          <p>Loading...</p>
+        ) : (
+          <Routes>
+            <Route
+              path="/"
+              element={
                 <TodoList todoList={todoList} onRemoveTodo={removeTodo} />
-              )
-            }
-          />
-
-          <Route path="/new" element={<h1>New Todo List</h1>} />
-        </Routes>
+              }
+            />
+            <Route path="/new" element={<h1>New Todo List</h1>} />
+          </Routes>
+        )}
       </React.Fragment>
     </BrowserRouter>
   );
