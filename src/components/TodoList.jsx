@@ -7,10 +7,10 @@ const TodoList = ({ todoList, onRemoveTodo }) => {
   return (
     <div>
       <ul>
-        {todoList.map((todoItem) => (
+        {todoList.map((todoItem, index) => (
           // Pass the todo item and onRemoveTodo function as props to ToDoListItem
           <ToDoListItem
-            key={todoItem.id}
+            key={`${todoItem.id}-${index}`}
             todo={todoItem}
             onRemoveTodo={onRemoveTodo} // Pass onRemoveTodo as a prop
           />
